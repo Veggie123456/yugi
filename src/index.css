@@ -1,0 +1,32 @@
+@import './theme.css';
+
+:root {
+	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+	color-scheme: dark;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+a { font-weight: 500; color: var(--accent); text-decoration: none; }
+a:hover { filter: brightness(1.2); }
+
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+
+button {
+	border-radius: 8px;
+	border: 1px solid #2a3b63;
+	padding: 0.6em 1.2em;
+	font-size: 1em;
+	font-weight: 600;
+	font-family: inherit;
+	background: linear-gradient(180deg, #1d2746, #121a30);
+	color: var(--text);
+	cursor: pointer;
+	transition: transform 0.1s ease, filter 0.2s ease;
+}
+button:hover { filter: brightness(1.15); }
+button:active { transform: translateY(1px); }

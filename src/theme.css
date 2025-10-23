@@ -1,0 +1,19 @@
+:root {
+	--bg: #0b0f1a;
+	--panel: #10182b;
+	--accent: #4da3ff;
+	--text: #e6f0ff;
+}
+
+body { background: var(--bg); color: var(--text); }
+.layout { max-width: 1280px; margin: 0 auto; padding: 1rem; }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.5rem 0; }
+.nav .brand { font-weight: 700; color: var(--text); }
+.nav nav { display: flex; gap: 1rem; }
+.nav a { color: var(--text); opacity: 0.8; }
+.nav a.active { color: var(--accent); }
+.nav a:hover { opacity: 1; }
+.panel { background: linear-gradient(180deg, #0f1628, #0a1222); border: 1px solid #1a2540; border-radius: 10px; padding: 12px; }
+.card .card-frame { background: #222a3f; border: 1px solid #2e3a5c; border-radius: 8px; overflow: hidden; }
+
+

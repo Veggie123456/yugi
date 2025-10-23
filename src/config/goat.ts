@@ -1,0 +1,98 @@
+import { GoatRulesConfig } from '../types/rules'
+
+// GOAT rules based on user-provided legalities and banlist
+export const defaultGoatRules: GoatRulesConfig = {
+	cutoffDateIso: '2005-04-30', // TLM sneak preview legal in April 2005
+	allowedSetCodes: [
+		'LOB','SDY','SDK','MRD','MRL','SRL','PSV','SDJ','SDP','LON','LOD','PGD','MFC','DCR','SYE','SKE','IOC','AST','SOD','DB1','RDS','FET','DR1','TLM','SD1','SD2','SD3','SD4','DB2'
+	],
+	allowedPromoPrefixes: [
+		'BPT','CMC','CT1','DBT','DDS','DMG','DL1','DL2','DL3','DL4','DL5','DL6','DL7','DL8','DOD','DOR','EDS','EP1','FMR','JMP','MC1','MOV','MP1','PCJ','PCK','PCY','ROD','SDD','SP1','TFK','TP1','TP2','TP3','TP4','TP5','TP6','TSC','WC4','WC5'
+	],
+	disallowedSetPrefixes: ['CRV'], // Cybernetic Revolution and later
+	disallowedMechanics: ['Synchro','Xyz','Pendulum','Link'],
+	banlist: {
+		forbidden: [
+			'Chaos Emperor Dragon - Envoy of the End',
+			'Fiber Jar',
+			'Magical Scientist',
+			'Makyura the Destructor',
+			'Witch of the Black Forest',
+			'Yata-Garasu',
+			'Butterfly Dagger - Elma',
+			'Change of Heart',
+			'Confiscation',
+			'Dark Hole',
+			"Harpie's Feather Duster",
+			'Mirage of Nightmare',
+			'Monster Reborn',
+			'Painful Choice',
+			'Raigeki',
+			'The Forceful Sentry',
+			'Imperial Order'
+		],
+		limited: [
+			'Black Luster Soldier - Envoy of the Beginning',
+			'Breaker the Magical Warrior',
+			'Cyber Jar',
+			'Dark Magician of Chaos',
+			'D.D. Warrior Lady',
+			'Exodia the Forbidden One',
+			'Exiled Force',
+			'Injection Fairy Lily',
+			'Jinzo',
+			'Left Arm of the Forbidden One',
+			'Left Leg of the Forbidden One',
+			'Morphing Jar',
+			'Protector of the Sanctuary',
+			'Reflect Bounder',
+			'Right Arm of the Forbidden One',
+			'Right Leg of the Forbidden One',
+			'Sacred Phoenix of Nephthys',
+			'Sangan',
+			'Sinister Serpent',
+			'Tribe-Infecting Virus',
+			'Twin-Headed Behemoth',
+			'Card Destruction',
+			'Delinquent Duo',
+			'Graceful Charity',
+			'Heavy Storm',
+			'Lightning Vortex',
+			'Mage Power',
+			'Mystical Space Typhoon',
+			'Pot of Greed',
+			'Premature Burial',
+			'Snatch Steal',
+			'Swords of Revealing Light',
+			'United We Stand',
+			'Call of the Haunted',
+			'Ceasefire',
+			'Deck Devastation Virus',
+			'Magic Cylinder',
+			'Mirror Force',
+			'Reckless Greed',
+			'Ring of Destruction',
+			'Torrential Tribute'
+		],
+		semiLimited: [
+			'Abyss Soldier',
+			'Dark Scorpion - Chick the Yellow',
+			'Manticore of Darkness',
+			'Marauding Captain',
+			'Night Assailant',
+			'Vampire Lord',
+			'Creature Swap',
+			'Emergency Provisions',
+			'Level Limit - Area B',
+			'Nobleman of Crossout',
+			'Reinforcement of the Army',
+			'Upstart Goblin',
+			'Good Goblin Housekeeping',
+			'Gravity Bind',
+			'Last Turn'
+		]
+	},
+	allowListOverrides: []
+}
+
+

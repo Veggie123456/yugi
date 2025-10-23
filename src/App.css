@@ -1,0 +1,8 @@
+.layout { max-width: 1280px; margin: 0 auto; padding: 1rem; }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.5rem 0; }
+.nav .brand { font-weight: 700; }
+.nav nav { display: flex; gap: 1rem; }
+.nav a { color: inherit; opacity: 0.9; }
+.nav a.active { color: #646cff; }
+.nav a:hover { opacity: 1; }
+.layout main { padding-top: 1rem; }

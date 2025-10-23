@@ -1,0 +1,26 @@
+[
+	{
+		"id": "b6f3b4e0",
+		"name": "Mystic Tomato",
+		"cardType": "Monster",
+		"subType": "Effect",
+		"setCode": "MRL",
+		"levelOrRank": 4,
+		"attack": 1400,
+		"defense": 1100,
+		"attribute": "DARK",
+		"description": "When this card is destroyed by battle and sent to the GY: You can Special Summon 1 DARK monster with 1500 or less ATK from your Deck, in face-up Attack Position.",
+		"releaseDate": "2003-03-01"
+	},
+	{
+		"id": "a1b2c3d4",
+		"name": "Pot of Greed",
+		"cardType": "Spell",
+		"subType": "Normal",
+		"setCode": "LOB",
+		"description": "Draw 2 cards.",
+		"releaseDate": "2002-03-08"
+	}
+]
+
+
