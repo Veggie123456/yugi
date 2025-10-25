@@ -48,3 +48,9 @@ Place sound effects in `public/sfx/` named `draw.mp3`, `summon.mp3`, `set.mp3`, 
 ### Notes
 
 - This is a UI/logic prototype. Full rule enforcement, comprehensive databases, multiplayer, and server logic are out of scope for this initial scaffold.
+
+### Optional: ocgcore (EDOPro) WASM integration
+
+1) Build ocgcore with Emscripten to produce `ocgcore.js` + `ocgcore.wasm`.
+2) Place both files in `public/ocgcore/`.
+3) The app loads them at runtime and prefers ocgcore for effect evaluation when available.

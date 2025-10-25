@@ -14,7 +14,7 @@ export default function Card({ card, small, onClick }: Props) {
 	return (
 		<motion.div className="card" style={{ width, height }} {...hoverLift} onClick={onClick}>
 			<div className="card-frame">
-				<img src={card.imageUrl ?? '/vite.svg'} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+				<img loading="lazy" src={card.imageUrl ?? '/vite.svg'} alt={card.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
 			</div>
 		</motion.div>
 	)

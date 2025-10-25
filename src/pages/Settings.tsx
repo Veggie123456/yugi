@@ -21,6 +21,7 @@ export default function Settings() {
 				<label>
 					<input type="checkbox" checked={animationsEnabled} onChange={(e) => setAnimationsEnabled(e.target.checked)} /> Animations enabled
 				</label>
+				<small>More: fast-forward prompts and chain confirmations will be added.</small>
 			</div>
 		</motion.div>
 	)

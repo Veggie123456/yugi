@@ -4,6 +4,7 @@ import { loadAllCards } from '../lib/cards'
 import { isCardLegalInGoat } from '../lib/goatFilter'
 import { useSettingsStore } from '../store/settings'
 import Card from '../components/Card'
+import { FixedSizeGrid as Grid } from 'react-window'
 
 export default function Database() {
 	const rules = useSettingsStore((s) => s.goatRules)
@@ -14,13 +15,20 @@ export default function Database() {
 		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
 			<h1>Card Database</h1>
 			<p>Browse cards filtered to GOAT format.</p>
-			<div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-				{legalCards.map((c) => (
-					<div key={c.id}>
-						<Card card={c} />
-						<div style={{ textAlign: 'center', marginTop: 4 }}>{c.name}</div>
-					</div>
-				))}
+			<div style={{ height: 600 }}>
+				<Grid columnCount={6} columnWidth={170} height={600} rowCount={Math.ceil(legalCards.length/6)} rowHeight={270} width={1040}>
+					{({ columnIndex, rowIndex, style }) => {
+						const idx = rowIndex*6 + columnIndex
+						const c = legalCards[idx]
+						if (!c) return <div style={style} />
+						return (
+							<div style={{ ...style, padding: 6 }}>
+								<Card card={c} />
+								<div style={{ textAlign: 'center', marginTop: 4 }}>{c.name}</div>
+							</div>
+						)
+					}}
+				</Grid>
 			</div>
 		</motion.div>
 	)
