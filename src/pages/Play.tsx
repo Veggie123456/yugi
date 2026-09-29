@@ -1,84 +1,156 @@
 import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { CardData } from '../types/card'
 import { loadAllCards } from '../lib/cards'
+import { isCardLegalInGoat } from '../lib/goatFilter'
+import { validateGoatDeck, isFusionMonster } from '../lib/deckRules'
+import { useSettingsStore } from '../store/settings'
 import Hand from '../components/Hand'
 import Board from '../components/Board'
 import HUD from '../components/HUD'
 import Log from '../components/Log'
 import { useDuelStore } from '../store/duel'
 import PhaseBar from '../components/PhaseBar'
-import TargetingOverlay from '../components/TargetingOverlay'
 import ChainPrompt from '../components/ChainPrompt'
 import { tryActivateFromHand } from '../effects/engine'
 
+function readDeck(key: string): CardData[] {
+	try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] }
+}
+
+function starterDeck(cards: CardData[]): CardData[] {
+	return cards.filter((card) => !isFusionMonster(card)).slice(0, 40)
+}
+
 export default function Play() {
+	const rules = useSettingsStore((s) => s.goatRules)
 	const resetWithDecks = useDuelStore((s) => s.resetWithDecks)
 	const draw = useDuelStore((s) => s.draw)
 	const normalSummon = useDuelStore((s) => s.normalSummon)
 	const setFromHand = useDuelStore((s) => s.setFromHand)
+	const setSpellTrapFromHand = useDuelStore((s) => s.setSpellTrapFromHand)
 	const declareAttack = useDuelStore((s) => s.declareAttack)
-	const p = useDuelStore((s) => s.players[s.turnPlayer])
-	const opp = useDuelStore((s) => s.players[s.turnPlayer===0?1:0])
+	const turnPlayer = useDuelStore((s) => s.turnPlayer)
+	const phase = useDuelStore((s) => s.phase)
+	const players = useDuelStore((s) => s.players)
+	const player = players[turnPlayer]
+	const opponent = players[turnPlayer === 0 ? 1 : 0]
 	const [selectedAttacker, setSelectedAttacker] = useState<number | null>(null)
+	const [selectedHand, setSelectedHand] = useState<number | null>(null)
+	const [usingSavedDeck, setUsingSavedDeck] = useState(false)
 
 	useEffect(() => {
 		loadAllCards().then((all) => {
-			const deck1 = [...all].slice(0, 40)
-			const deck2 = [...all].slice(40, 80)
+			const legal = all.filter((card) => isCardLegalInGoat(card, rules))
+			const storedMain = readDeck('deck.main')
+			const storedSide = readDeck('deck.side')
+			const storedFusion = readDeck('deck.fusion')
+			const saved = validateGoatDeck({ main: storedMain, side: storedSide, fusion: storedFusion }, rules)
+			const deck1 = saved.valid ? storedMain : starterDeck(legal)
+			const deck2 = starterDeck([...legal].reverse())
+			setUsingSavedDeck(saved.valid)
 			resetWithDecks(deck1, deck2)
-			draw(0, 5); draw(1, 5)
+			draw(0, 5)
+			draw(1, 5)
 		})
-	}, [resetWithDecks, draw])
+	}, [rules, resetWithDecks, draw])
+
+	useEffect(() => {
+		setSelectedAttacker(null)
+		setSelectedHand(null)
+	}, [turnPlayer, phase])
+
+	const selectedCard = selectedHand === null ? null : player.hand[selectedHand]
+	const openMonsterZone = useMemo(() => player.monsterZone.findIndex((zone) => zone === null), [player.monsterZone])
+	const openSpellZone = useMemo(() => player.spellTrapZone.findIndex((zone) => zone === null), [player.spellTrapZone])
+	const opponentHasMonster = opponent.monsterZone.some(Boolean)
+
+	function chooseOwnMonster(index: number) {
+		if (phase !== 'BATTLE') return
+		setSelectedAttacker((current) => current === index ? null : index)
+	}
+
+	function chooseOpponentMonster(index: number) {
+		if (selectedAttacker === null) return
+		declareAttack(selectedAttacker, index)
+		setSelectedAttacker(null)
+	}
 
 	return (
-		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-			<h1>Play</h1>
-			<PhaseBar />
-			<HUD />
-			<Board
-				monsterZone={p.monsterZone.filter(Boolean).map((z: any) => z.card)}
-				spellTrapZone={p.spellTrapZone.filter(Boolean) as any}
-				graveyard={p.graveyard}
-				opponentMonsterZone={opp.monsterZone.filter(Boolean).map((z: any) => z.card)}
-				opponentSpellTrapZone={opp.spellTrapZone.filter(Boolean) as any}
-				opponentGraveyard={opp.graveyard}
-				onAttack={(attIdx, tgtIdx) => {
-					// Click own monster to select attacker
-					if (typeof attIdx === 'number' && attIdx >= 0 && tgtIdx === undefined) {
-						setSelectedAttacker(attIdx)
-						return
-					}
-					// If attacker selected and opponent clicked -> targeted attack
-					if (selectedAttacker !== null && typeof tgtIdx === 'number') {
-						declareAttack(selectedAttacker, tgtIdx)
-						setSelectedAttacker(null)
-						return
-					}
-					// If attacker selected and you click attacker again -> direct attack
-					if (selectedAttacker !== null && typeof attIdx === 'number' && attIdx === selectedAttacker) {
-						declareAttack(selectedAttacker)
-						setSelectedAttacker(null)
-					}
-				}}
-				onOpponentSpellTrapClick={(_, i) => {
-					// If we were in a targeting state for MST (or similar), select it via engine
-					// Engine will validate target filter.
-				}}
-			/>
-			<h3>Your Hand</h3>
-			<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-				<Hand cards={p.hand} onCardClick={(_, i) => {
-					// Try to activate a spell from hand; if not, attempt Normal Summon
-					tryActivateFromHand(0, i)
-					// Fallback to normal summon to first empty slot
-					normalSummon(0, i, (p.monsterZone.findIndex((z) => z === null) + 5) % 5)
-				}} />
+		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack duel-page">
+			<div className="page-heading compact">
+				<div>
+					<div className="eyebrow">LOCAL DUEL ALPHA</div>
+					<h1>GOAT Duel</h1>
+				</div>
+				<div className="engine-badge">{usingSavedDeck ? 'Using your saved deck' : 'Using legal starter deck'}</div>
 			</div>
+
+			<div className="alpha-banner">
+				The GOAT-only duel UI is live while the Project Ignis rules core is being wired underneath it. Zones, phases, LP, battle math, deck-out, first-turn draw, first-turn battle restriction, animation hooks and sounds work now; complex card effects still use the temporary prototype engine.
+			</div>
+
+			<HUD />
+			<PhaseBar />
+			<Board
+				player={player}
+				opponent={opponent}
+				selectedAttacker={selectedAttacker}
+				onOwnMonsterClick={chooseOwnMonster}
+				onOpponentMonsterClick={chooseOpponentMonster}
+			/>
+
+			{selectedAttacker !== null && !opponentHasMonster && (
+				<div className="action-strip">
+					<button onClick={() => { declareAttack(selectedAttacker); setSelectedAttacker(null) }}>Direct Attack</button>
+				</div>
+			)}
+
+			<div className="hand-header">
+				<strong>{player.name} Hand · {player.hand.length}</strong>
+				<span className="muted">Select a card, then choose an action.</span>
+			</div>
+			<Hand cards={player.hand} onCardClick={(_, index) => setSelectedHand(index)} />
+
+			{selectedCard && (
+				<div className="panel selected-card-actions">
+					<div className="selected-card-copy">
+						<strong>{selectedCard.name}</strong>
+						<div className="muted">{selectedCard.cardType}{selectedCard.subType ? ` · ${selectedCard.subType}` : ''}</div>
+						<small>{selectedCard.description}</small>
+					</div>
+					<div className="action-strip">
+						{selectedCard.cardType === 'Monster' && (
+							<>
+								<button disabled={openMonsterZone < 0} onClick={() => {
+									if (openMonsterZone >= 0 && selectedHand !== null) normalSummon(turnPlayer, selectedHand, openMonsterZone)
+									setSelectedHand(null)
+								}}>Normal Summon</button>
+								<button disabled={openMonsterZone < 0} onClick={() => {
+									if (openMonsterZone >= 0 && selectedHand !== null) setFromHand(turnPlayer, selectedHand, openMonsterZone)
+									setSelectedHand(null)
+								}}>Set Monster</button>
+							</>
+						)}
+						{selectedCard.cardType === 'Spell' && (
+							<button onClick={() => {
+								if (selectedHand !== null) tryActivateFromHand(turnPlayer, selectedHand)
+								setSelectedHand(null)
+							}}>Activate</button>
+						)}
+						{(selectedCard.cardType === 'Spell' || selectedCard.cardType === 'Trap') && (
+							<button disabled={openSpellZone < 0} onClick={() => {
+								if (openSpellZone >= 0 && selectedHand !== null) setSpellTrapFromHand(turnPlayer, selectedHand, openSpellZone)
+								setSelectedHand(null)
+							}}>Set Spell/Trap</button>
+						)}
+						<button onClick={() => setSelectedHand(null)}>Cancel</button>
+					</div>
+				</div>
+			)}
+
 			<Log />
-			<TargetingOverlay active={selectedAttacker !== null} />
 			<ChainPrompt />
 		</motion.div>
 	)
 }
-
-
