@@ -1,15 +1,14 @@
-import { GoatRulesConfig } from '../types/rules'
+import type { GoatRulesConfig } from '../types/rules'
 
-// GOAT rules based on user-provided legalities and banlist
 export const defaultGoatRules: GoatRulesConfig = {
-	cutoffDateIso: '2005-04-30', // TLM sneak preview legal in April 2005
+	cutoffDateIso: '2005-08-17',
 	allowedSetCodes: [
 		'LOB','SDY','SDK','MRD','MRL','SRL','PSV','SDJ','SDP','LON','LOD','PGD','MFC','DCR','SYE','SKE','IOC','AST','SOD','DB1','RDS','FET','DR1','TLM','SD1','SD2','SD3','SD4','DB2'
 	],
 	allowedPromoPrefixes: [
 		'BPT','CMC','CT1','DBT','DDS','DMG','DL1','DL2','DL3','DL4','DL5','DL6','DL7','DL8','DOD','DOR','EDS','EP1','FMR','JMP','MC1','MOV','MP1','PCJ','PCK','PCY','ROD','SDD','SP1','TFK','TP1','TP2','TP3','TP4','TP5','TP6','TSC','WC4','WC5'
 	],
-	disallowedSetPrefixes: ['CRV'], // Cybernetic Revolution and later
+	disallowedSetPrefixes: ['CRV'],
 	disallowedMechanics: ['Synchro','Xyz','Pendulum','Link'],
 	banlist: {
 		forbidden: [
@@ -94,5 +93,3 @@ export const defaultGoatRules: GoatRulesConfig = {
 	},
 	allowListOverrides: []
 }
-
-
