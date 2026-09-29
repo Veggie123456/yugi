@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { CardData } from '../types/card'
+import type { CardData } from '../types/card'
 import Card from './Card'
 
 interface Props {
@@ -9,20 +9,21 @@ interface Props {
 
 export default function Hand({ cards, onCardClick }: Props) {
 	return (
-		<div style={{ display: 'flex', gap: 8, padding: 8, justifyContent: 'center' }}>
+		<div className="duel-hand">
 			<AnimatePresence>
-				{cards.map((c, i) => (
-					<motion.div key={c.id}
-						initial={{ y: 20, opacity: 0 }}
-						animate={{ y: 0, opacity: 1 }}
-						exit={{ y: 20, opacity: 0 }}
-						transition={{ type: 'spring', stiffness: 280, damping: 20 }}>
-						<Card card={c} onClick={() => onCardClick?.(c, i)} />
+				{cards.map((card, index) => (
+					<motion.div
+						key={`${card.id}-${index}`}
+						initial={{ y: 28, opacity: 0, rotate: -2 }}
+						animate={{ y: 0, opacity: 1, rotate: 0 }}
+						exit={{ y: 28, opacity: 0, scale: 0.85 }}
+						whileHover={{ y: -14, scale: 1.04, zIndex: 10 }}
+						transition={{ type: 'spring', stiffness: 280, damping: 20 }}
+					>
+						<Card card={card} onClick={() => onCardClick?.(card, index)} />
 					</motion.div>
 				))}
 			</AnimatePresence>
 		</div>
 	)
 }
-
-
