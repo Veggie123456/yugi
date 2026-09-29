@@ -8,7 +8,8 @@ export async function initOcgCore(): Promise<boolean> {
 
   try {
     // Keep the URL dynamic so Vite does not try to bundle an optional runtime asset.
-    const coreUrl = '/ocgcore/ocgcore.js'
+    const base = import.meta.env.BASE_URL
+    const coreUrl = `${base}ocgcore/ocgcore.js`
     const imported = await import(/* @vite-ignore */ coreUrl)
     const ModuleFactory = imported.default ?? imported
 
@@ -17,7 +18,7 @@ export async function initOcgCore(): Promise<boolean> {
     }
 
     coreModule = await ModuleFactory({
-      locateFile: (path: string) => path.endsWith('.wasm') ? '/ocgcore/ocgcore.wasm' : `/ocgcore/${path}`,
+      locateFile: (path: string) => path.endsWith('.wasm') ? `${base}ocgcore/ocgcore.wasm` : `${base}ocgcore/${path}`,
     })
     return true
   } catch (error) {
