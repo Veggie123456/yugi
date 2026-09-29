@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { CardData } from '../types/card'
 import { loadAllCards } from '../lib/cards'
 import { isCardLegalInGoat, maxCopiesForCard } from '../lib/goatFilter'
@@ -217,7 +217,7 @@ export default function Decks() {
 							<button
 								key={preset.id}
 								className="starter-preset"
-								style={{ '--starter-accent': preset.accent } as React.CSSProperties}
+								style={{ '--starter-accent': preset.accent } as CSSProperties}
 								onClick={() => loadClassicStarter(preset.id)}
 							>
 								{cover && <Card card={cover} small />}
