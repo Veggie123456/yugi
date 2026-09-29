@@ -28,7 +28,8 @@ export const defaultGoatRules: GoatRulesConfig = {
 			'Painful Choice',
 			'Raigeki',
 			'The Forceful Sentry',
-			'Imperial Order'
+			'Imperial Order',
+		'Exarion Universe'
 		],
 		limited: [
 			'Black Luster Soldier - Envoy of the Beginning',
