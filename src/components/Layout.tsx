@@ -9,6 +9,7 @@ export default function Layout() {
 					<NavLink to="/lobby">Play</NavLink>
 					<NavLink to="/decks">Deck Builder</NavLink>
 					<NavLink to="/database">Cards</NavLink>
+					<NavLink to="/effects">Effects</NavLink>
 					<NavLink to="/settings">Settings</NavLink>
 				</nav>
 			</header>
