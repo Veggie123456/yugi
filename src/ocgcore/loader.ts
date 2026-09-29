@@ -1,30 +1,33 @@
 // Loader for EDOPro/YGOPro ocgcore compiled with Emscripten.
-// Expects ocgcore.js and ocgcore.wasm in /ocgcore/.
+// Expects ocgcore.js and ocgcore.wasm in /public/ocgcore/ when available.
 
 let coreModule: any | null = null
 
 export async function initOcgCore(): Promise<boolean> {
-	if (coreModule) return true
-	try {
-		// Dynamically import the Emscripten JS glue emitted as ocgcore.js
-		// The glue should call ModuleFactory and accept locateFile.
-		// @ts-ignore
-		const ModuleFactory = (await import(/* @vite-ignore */ '/ocgcore/ocgcore.js')).default || (await import(/* @vite-ignore */ '/ocgcore/ocgcore.js'))
-		coreModule = await ModuleFactory({
-			locateFile: (path: string) => {
-				if (path.endsWith('.wasm')) return '/ocgcore/ocgcore.wasm'
-				return `/ocgcore/${path}`
-			},
-		})
-		return true
-	} catch (e) {
-		console.warn('ocgcore not available:', e)
-		coreModule = null
-		return false
-	}
+  if (coreModule) return true
+
+  try {
+    // Keep the URL dynamic so Vite does not try to bundle an optional runtime asset.
+    const coreUrl = '/ocgcore/ocgcore.js'
+    const imported = await import(/* @vite-ignore */ coreUrl)
+    const ModuleFactory = imported.default ?? imported
+
+    if (typeof ModuleFactory !== 'function') {
+      throw new Error('ocgcore module factory was not exported')
+    }
+
+    coreModule = await ModuleFactory({
+      locateFile: (path: string) => path.endsWith('.wasm') ? '/ocgcore/ocgcore.wasm' : `/ocgcore/${path}`,
+    })
+    return true
+  } catch (error) {
+    // The alpha deliberately works without WASM while the full rules core is being integrated.
+    console.info('ocgcore runtime not installed yet', error)
+    coreModule = null
+    return false
+  }
 }
 
-export function getOcgCore(): any | null { return coreModule }
-
-
-
+export function getOcgCore(): any | null {
+  return coreModule
+}
