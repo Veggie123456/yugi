@@ -38,6 +38,7 @@ export default function Play() {
 	const [selectedAttacker, setSelectedAttacker] = useState<number | null>(null)
 	const [selectedHand, setSelectedHand] = useState<number | null>(null)
 	const [usingSavedDeck, setUsingSavedDeck] = useState(false)
+	const [classicStarter, setClassicStarter] = useState('')
 
 	useEffect(() => {
 		loadAllCards().then((all) => {
@@ -46,9 +47,12 @@ export default function Play() {
 			const storedSide = readDeck('deck.side')
 			const storedFusion = readDeck('deck.fusion')
 			const saved = validateGoatDeck({ main: storedMain, side: storedSide, fusion: storedFusion }, rules)
-			const deck1 = saved.valid ? storedMain : starterDeck(legal)
+			const isClassicStarter = localStorage.getItem('deck.mode') === 'classic-starter' && storedMain.length >= 40
+			const starterName = localStorage.getItem('deck.preset') || ''
+			const deck1 = isClassicStarter ? storedMain : saved.valid ? storedMain : starterDeck(legal)
 			const deck2 = starterDeck([...legal].reverse())
-			setUsingSavedDeck(saved.valid)
+			setUsingSavedDeck(isClassicStarter || saved.valid)
+			setClassicStarter(isClassicStarter ? starterName : '')
 			resetWithDecks(deck1, deck2)
 			draw(0, 5)
 			draw(1, 5)
@@ -83,7 +87,11 @@ export default function Play() {
 					<div className="eyebrow">LOCAL DUEL ALPHA</div>
 					<h1>GOAT Duel</h1>
 				</div>
-				<div className="engine-badge">{usingSavedDeck ? 'Using your saved deck' : 'Using legal starter deck'}</div>
+				<div className="engine-badge">{
+					classicStarter
+						? `Classic Starter · ${classicStarter.charAt(0).toUpperCase() + classicStarter.slice(1)}`
+						: usingSavedDeck ? 'Using your saved deck' : 'Using legal starter deck'
+				}</div>
 			</div>
 
 			<div className="alpha-banner">
