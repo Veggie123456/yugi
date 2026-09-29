@@ -1,37 +1,58 @@
 import { motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
+import type { CardData } from '../types/card'
 import { loadAllCards } from '../lib/cards'
 import { isCardLegalInGoat } from '../lib/goatFilter'
 import { useSettingsStore } from '../store/settings'
 import Card from '../components/Card'
-import { FixedSizeGrid as Grid } from 'react-window'
 
 export default function Database() {
 	const rules = useSettingsStore((s) => s.goatRules)
-	const [cards, setCards] = useState<any[]>([])
+	const [cards, setCards] = useState<CardData[]>([])
+	const [query, setQuery] = useState('')
+	const [type, setType] = useState('All')
+
 	useEffect(() => { loadAllCards().then(setCards) }, [])
-	const legalCards = useMemo(() => cards.filter((c) => isCardLegalInGoat(c, rules)), [cards, rules])
+
+	const legalCards = useMemo(() => cards.filter((card) => isCardLegalInGoat(card, rules)), [cards, rules])
+	const visible = useMemo(() => {
+		const q = query.trim().toLowerCase()
+		return legalCards.filter((card) => {
+			if (type !== 'All' && card.cardType !== type) return false
+			return !q || card.name.toLowerCase().includes(q) || card.description?.toLowerCase().includes(q)
+		}).slice(0, 400)
+	}, [legalCards, query, type])
+
 	return (
-		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-			<h1>Card Database</h1>
-			<p>Browse cards filtered to GOAT format.</p>
-			<div style={{ height: 600 }}>
-				<Grid columnCount={6} columnWidth={170} height={600} rowCount={Math.ceil(legalCards.length/6)} rowHeight={270} width={1040}>
-					{({ columnIndex, rowIndex, style }) => {
-						const idx = rowIndex*6 + columnIndex
-						const c = legalCards[idx]
-						if (!c) return <div style={style} />
-						return (
-							<div style={{ ...style, padding: 6 }}>
-								<Card card={c} />
-								<div style={{ textAlign: 'center', marginTop: 4 }}>{c.name}</div>
-							</div>
-						)
-					}}
-				</Grid>
+		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
+			<div className="page-heading">
+				<div>
+					<div className="eyebrow">LEGAL CARD POOL</div>
+					<h1>GOAT Card Database</h1>
+					<p>{legalCards.length} cards currently available to the deck builder and duel client.</p>
+				</div>
+			</div>
+			<div className="panel toolbar">
+				<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or effect text…" />
+				<select value={type} onChange={(event) => setType(event.target.value)}>
+					<option>All</option>
+					<option>Monster</option>
+					<option>Spell</option>
+					<option>Trap</option>
+				</select>
+			</div>
+			<div className="database-grid">
+				{visible.map((card) => (
+					<div className="database-card panel" key={card.id}>
+						<Card card={card} />
+						<div>
+							<strong>{card.name}</strong>
+							<div className="muted">{card.cardType}{card.subType ? ` · ${card.subType}` : ''}{card.setCode ? ` · ${card.setCode}` : ''}</div>
+							<p>{card.description}</p>
+						</div>
+					</div>
+				))}
 			</div>
 		</motion.div>
 	)
 }
-
-
