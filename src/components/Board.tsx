@@ -1,4 +1,4 @@
-import { CardData } from '../types/card'
+import type { CardData } from '../types/card'
 import Card from './Card'
 
 interface ZoneProps {
@@ -30,7 +30,7 @@ interface BoardProps {
 	onMonsterClick?: (card: CardData, index: number) => void
 	onSpellTrapClick?: (card: CardData, index: number) => void
 	onAttack?: (attackerIndex: number, targetIndex?: number) => void
-\tonOpponentSpellTrapClick?: (card: CardData, index: number) => void
+	onOpponentSpellTrapClick?: (card: CardData, index: number) => void
 }
 
 export default function Board({ monsterZone, spellTrapZone, graveyard, opponentMonsterZone, opponentSpellTrapZone, opponentGraveyard, onMonsterClick, onSpellTrapClick, onAttack, onOpponentSpellTrapClick }: BoardProps) {
@@ -49,5 +49,3 @@ export default function Board({ monsterZone, spellTrapZone, graveyard, opponentM
 		</div>
 	)
 }
-
-
