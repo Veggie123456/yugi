@@ -2,19 +2,36 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 
 export default function Home() {
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <div className="panel" style={{ padding: 28, marginTop: 24 }}>
-        <div style={{ opacity: .7, fontWeight: 700, letterSpacing: 2 }}>SUMMER 2005. FOREVER.</div>
-        <h1 style={{ fontSize: 'clamp(2.4rem, 7vw, 5.5rem)', lineHeight: .95, margin: '12px 0' }}>GOAT DUEL ONLINE</h1>
-        <p style={{ maxWidth: 720, fontSize: 18, opacity: .82 }}>
-          A browser-first Yu-Gi-Oh! simulator dedicated to the classic GOAT card pool, April 2005 banlist and period-correct rules.
-        </p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 22 }}>
-          <Link to="/lobby"><button>Enter Duel Lobby</button></Link>
-          <Link to="/decks"><button>Build a Deck</button></Link>
-        </div>
-      </div>
-    </motion.div>
-  )
+	return (
+		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hero">
+			<section>
+				<div className="eyebrow">AUGUST 2005 CARD POOL · APRIL 2005 BANLIST</div>
+				<h1>GOAT<br/><span>ONLINE</span></h1>
+				<p>A focused Yu-Gi-Oh! simulator built only for GOAT Format: legal cards, 2005 rules, deck building, automatic duels, matchmaking, replays, universal card animations and sound.</p>
+				<div className="hero-actions">
+					<Link to="/lobby">Enter Duel Lobby</Link>
+					<Link to="/decks" className="secondary">Build a Deck</Link>
+					<Link to="/database" className="secondary">Browse Cards</Link>
+				</div>
+			</section>
+			<aside className="status-stack">
+				<div className="status-card">
+					<strong><span className="status-dot" />GOAT card pool + deck validator</strong>
+					<small>Legal printings, April 2005 list, Main/Side/Fusion and .ydk import/export.</small>
+				</div>
+				<div className="status-card">
+					<strong><span className="status-dot" />Playable duel shell</strong>
+					<small>LP, phases, fixed zones, battle, first-turn rules, sounds and animation hooks.</small>
+				</div>
+				<div className="status-card">
+					<strong><span className="status-dot building" />Automatic card-effects engine</strong>
+					<small>Project Ignis ocgcore-wasm MODE_GOAT is the target rules authority for complete card interactions.</small>
+				</div>
+				<div className="status-card">
+					<strong><span className="status-dot building" />Online rooms + matchmaking</strong>
+					<small>The lobby is in place; server-authoritative duel synchronization is the networking milestone.</small>
+				</div>
+			</aside>
+		</motion.div>
+	)
 }
