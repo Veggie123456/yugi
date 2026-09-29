@@ -5,19 +5,25 @@ export default function HUD() {
 	const lp2 = useDuelStore((s) => s.players[1].lifePoints)
 	const phase = useDuelStore((s) => s.phase)
 	const turn = useDuelStore((s) => s.turnPlayer)
-	const endPhase = useDuelStore((s) => s.endPhase)
-	const draw = useDuelStore((s) => s.draw)
+	const turnNumber = useDuelStore((s) => s.turnNumber)
+	const turnDrawn = useDuelStore((s) => s.turnDrawn)
+	const winner = useDuelStore((s) => s.winner)
+	const drawForTurn = useDuelStore((s) => s.drawForTurn)
+	const surrender = useDuelStore((s) => s.surrender)
+
 	return (
-		<div className="panel" style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-			<div>P1 LP: {lp1}</div>
-			<div>Turn: {turn===0?'P1':'P2'} · Phase: {phase}</div>
-			<div>P2 LP: {lp2}</div>
-			<div style={{ display: 'flex', gap: 8 }}>
-				<button onClick={() => draw(turn as 0|1)}>Draw</button>
-				<button onClick={endPhase}>End Phase</button>
+		<div className="panel duel-hud">
+			<div className="lp-box"><span>P1</span><strong>{lp1.toLocaleString()} LP</strong></div>
+			<div className="turn-box">
+				<strong>Turn {turnNumber} · {turn === 0 ? 'Player 1' : 'Player 2'}</strong>
+				<span>{phase}</span>
+				{winner !== undefined && <b>{winner === 'draw' ? 'DRAW' : `PLAYER ${winner + 1} WINS`}</b>}
+			</div>
+			<div className="lp-box"><span>P2</span><strong>{lp2.toLocaleString()} LP</strong></div>
+			<div className="hud-actions">
+				<button disabled={phase !== 'DRAW' || turnDrawn || winner !== undefined} onClick={drawForTurn}>Draw for Turn</button>
+				<button disabled={winner !== undefined} onClick={() => surrender(turn)}>Surrender</button>
 			</div>
 		</div>
 	)
 }
-
-
