@@ -1,5 +1,5 @@
 import data from '../data/cards.sample.json'
-import { CardData } from '../types/card'
+import type { CardData } from '../types/card'
 
 export async function loadAllCards(): Promise<CardData[]> {
 	try {
@@ -11,5 +11,3 @@ export async function loadAllCards(): Promise<CardData[]> {
 	} catch {}
 	return data as unknown as CardData[]
 }
-
-
