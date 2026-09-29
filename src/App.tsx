@@ -9,6 +9,7 @@ import Play from './pages/Play'
 import Decks from './pages/Decks'
 import Database from './pages/Database'
 import Settings from './pages/Settings'
+import EffectsDemo from './pages/EffectsDemo'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="play" element={<Play />} />
             <Route path="decks" element={<Decks />} />
             <Route path="database" element={<Database />} />
+            <Route path="effects" element={<EffectsDemo />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
