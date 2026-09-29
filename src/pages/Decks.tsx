@@ -6,6 +6,7 @@ import { isCardLegalInGoat, maxCopiesForCard } from '../lib/goatFilter'
 import { isFusionMonster, validateGoatDeck } from '../lib/deckRules'
 import { useSettingsStore } from '../store/settings'
 import Card from '../components/Card'
+import { CLASSIC_STARTER_DECKS, buildClassicStarterDeck, type StarterDeckId } from '../data/classicStarterDecks'
 
 type DeckTarget = 'main' | 'side' | 'fusion'
 type CardFilter = 'All' | 'Monster' | 'Spell' | 'Trap' | 'Fusion'
@@ -56,6 +57,8 @@ export default function Decks() {
 	}
 
 	function addCard(card: CardData) {
+		localStorage.removeItem('deck.mode')
+		localStorage.removeItem('deck.preset')
 		const max = maxCopiesForCard(card, rules)
 		if (totalCopies(card.name) >= max) {
 			setNotice(`${card.name} is already at its ${max}-copy limit.`)
@@ -89,6 +92,8 @@ export default function Decks() {
 	}
 
 	function removeCard(section: DeckTarget, index: number) {
+		localStorage.removeItem('deck.mode')
+		localStorage.removeItem('deck.preset')
 		if (section === 'main') setMain((current) => current.filter((_, i) => i !== index))
 		if (section === 'side') setSide((current) => current.filter((_, i) => i !== index))
 		if (section === 'fusion') setFusion((current) => current.filter((_, i) => i !== index))
@@ -98,7 +103,24 @@ export default function Decks() {
 		setMain([])
 		setSide([])
 		setFusion([])
+		localStorage.removeItem('deck.mode')
+		localStorage.removeItem('deck.preset')
 		setNotice('Deck cleared.')
+	}
+
+	function loadClassicStarter(id: StarterDeckId) {
+		const built = buildClassicStarterDeck(cards, id)
+		if (!built.preset) return
+		if (built.missing.length) {
+			setNotice(`Could not load ${built.preset.title}: missing ${built.missing.join(', ')}.`)
+			return
+		}
+		setMain(built.main)
+		setSide(built.side)
+		setFusion(built.fusion)
+		localStorage.setItem('deck.mode', 'classic-starter')
+		localStorage.setItem('deck.preset', id)
+		setNotice(`${built.preset.title} loaded exactly from the original ${built.preset.year} North American product list. Classic Starter decks may contain cards forbidden by the April 2005 GOAT banlist.`)
 	}
 
 	function exportYdk() {
@@ -121,6 +143,8 @@ export default function Decks() {
 	}
 
 	function importYdk(text: string) {
+		localStorage.removeItem('deck.mode')
+		localStorage.removeItem('deck.preset')
 		const idToCard = new Map(cards.map((card) => [String(card.id), card]))
 		const sections: Record<DeckTarget, string[]> = { main: [], side: [], fusion: [] }
 		let section: DeckTarget = 'main'
@@ -175,6 +199,40 @@ export default function Decks() {
 					{validation.valid ? '✓ Duel Ready' : `${validation.errors.length} issue${validation.errors.length === 1 ? '' : 's'}`}
 				</div>
 			</div>
+
+			<section className="panel">
+				<div className="deck-section-title">
+					<div>
+						<strong>Classic Starter Decks</strong>
+						<div className="muted" style={{ fontSize: '.8rem', marginTop: 3 }}>
+							Original North American Yugi/Kaiba 2002 and Joey/Pegasus 2003 lists. One click loads the entire product deck.
+						</div>
+					</div>
+					<span>4 presets</span>
+				</div>
+				<div className="starter-preset-grid">
+					{CLASSIC_STARTER_DECKS.map((preset) => {
+						const cover = cards.find((card) => card.name === preset.coverCard)
+						return (
+							<button
+								key={preset.id}
+								className="starter-preset"
+								style={{ '--starter-accent': preset.accent } as React.CSSProperties}
+								onClick={() => loadClassicStarter(preset.id)}
+							>
+								{cover && <Card card={cover} small />}
+								<span>
+									<strong>{preset.character}</strong>
+									<small>{preset.year} · {preset.cardNames.length} cards</small>
+								</span>
+							</button>
+						)
+					})}
+				</div>
+				<div className="classic-warning">
+					These are historical starter products, not reconstructed tournament decks. Some included cards were Forbidden by the April 2005 GOAT list, so they play in Classic Starter/practice mode rather than GOAT-legal matchmaking.
+				</div>
+			</section>
 
 			<div className="deck-builder-grid">
 				<section className="panel card-browser">
