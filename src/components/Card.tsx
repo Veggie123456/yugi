@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { CardData } from '../types/card'
+import type { CardData } from '../types/card'
 import { hoverLift } from '../lib/animation'
 
 interface Props {
@@ -19,5 +19,3 @@ export default function Card({ card, small, onClick }: Props) {
 		</motion.div>
 	)
 }
-
-
