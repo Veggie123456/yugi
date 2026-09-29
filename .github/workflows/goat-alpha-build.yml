@@ -3,6 +3,7 @@ name: GOAT Alpha Build
 on:
   push:
     branches:
+      - main
       - goat-online-alpha
   pull_request:
     branches:
