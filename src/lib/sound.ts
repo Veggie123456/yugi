@@ -23,7 +23,7 @@ export function initSounds(enabled: boolean) {
 	if (!enabled || initialized) return
 	initialized = true
 	for (const [key, file] of Object.entries(soundFiles) as [SoundKey, string][]) {
-		sounds[key] = new Howl({ src: [`/sfx/${file}`], volume: 0.45, preload: true })
+		sounds[key] = new Howl({ src: [`${import.meta.env.BASE_URL}sfx/${file}`], volume: 0.45, preload: true })
 	}
 }
 
