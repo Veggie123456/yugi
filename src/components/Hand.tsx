@@ -4,23 +4,29 @@ import Card from './Card'
 
 interface Props {
 	cards: CardData[]
+	opponent?: boolean
 	onCardClick?: (card: CardData, index: number) => void
 }
 
-export default function Hand({ cards, onCardClick }: Props) {
+function CardBack() {
+	return <div className="hand-card-back"><span>GOAT</span></div>
+}
+
+export default function Hand({ cards, opponent, onCardClick }: Props) {
 	return (
-		<div className="duel-hand">
+		<div className={opponent ? 'duel-hand opponent-hand' : 'duel-hand player-hand'}>
 			<AnimatePresence>
 				{cards.map((card, index) => (
 					<motion.div
 						key={`${card.id}-${index}`}
-						initial={{ y: 28, opacity: 0, rotate: -2 }}
-						animate={{ y: 0, opacity: 1, rotate: 0 }}
-						exit={{ y: 28, opacity: 0, scale: 0.85 }}
-						whileHover={{ y: -14, scale: 1.04, zIndex: 10 }}
+						className="hand-card-wrap"
+						initial={{ y: opponent ? -28 : 28, opacity: 0 }}
+						animate={{ y: 0, opacity: 1 }}
+						exit={{ y: opponent ? -28 : 28, opacity: 0, scale: 0.85 }}
+						whileHover={opponent ? undefined : { y: -18, scale: 1.05, zIndex: 30 }}
 						transition={{ type: 'spring', stiffness: 280, damping: 20 }}
 					>
-						<Card card={card} onClick={() => onCardClick?.(card, index)} />
+						{opponent ? <CardBack /> : <Card card={card} onClick={() => onCardClick?.(card, index)} />}
 					</motion.div>
 				))}
 			</AnimatePresence>
