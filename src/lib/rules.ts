@@ -1,4 +1,4 @@
-import { CardData } from '../types/card'
+import type { CardData } from '../types/card'
 
 export function tributeRequirementFor(card: CardData): number {
 	const level = card.levelOrRank ?? 0
@@ -11,8 +11,7 @@ export function canNormalSummonNow(phase: string): boolean {
 	return phase === 'MAIN1' || phase === 'MAIN2'
 }
 
-export function canActivateSpellFromHandNow(phase: string, isYourTurn: boolean): boolean {
-	// Simplified: Normal Spells in Main Phases; Quick-Play from hand only your turn.
+export function canActivateSpellFromHandNow(phase: string, _isYourTurn: boolean): boolean {
 	return phase === 'MAIN1' || phase === 'MAIN2'
 }
 
@@ -21,13 +20,11 @@ export function canChangePositionNow(phase: string): boolean {
 }
 
 export function canSpecialSummonBLS(gy: CardData[]): boolean {
-	let hasLight = false, hasDark = false
-	for (const c of gy) {
-		if (c.attribute === 'LIGHT') hasLight = true
-		if (c.attribute === 'DARK') hasDark = true
+	let hasLight = false
+	let hasDark = false
+	for (const card of gy) {
+		if (card.attribute === 'LIGHT') hasLight = true
+		if (card.attribute === 'DARK') hasDark = true
 	}
 	return hasLight && hasDark
 }
-
-
-
