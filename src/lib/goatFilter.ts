@@ -1,5 +1,5 @@
-import { CardData } from '../types/card'
-import { GoatRulesConfig } from '../types/rules'
+import type { CardData } from '../types/card'
+import type { GoatRulesConfig } from '../types/rules'
 
 function hasDisallowedMechanic(card: CardData, rules: GoatRulesConfig): boolean {
 	const mech = card.subType
@@ -7,24 +7,30 @@ function hasDisallowedMechanic(card: CardData, rules: GoatRulesConfig): boolean 
 	return rules.disallowedMechanics?.includes(String(mech)) ?? false
 }
 
+function isKnownLegalPrinting(card: CardData, rules: GoatRulesConfig): boolean {
+	if (card.setCode && rules.allowedSetCodes.includes(card.setCode)) return true
+	const promo = card.promoCode ?? card.setCode
+	return !!promo && rules.allowedPromoPrefixes.some((prefix) => promo.startsWith(prefix))
+}
+
 export function isCardLegalInGoat(card: CardData, rules: GoatRulesConfig): boolean {
-	const name = card.name
-	if (rules.banlist.forbidden.includes(name)) return false
+	if (rules.banlist.forbidden.includes(card.name)) return false
 	if (hasDisallowedMechanic(card, rules)) return false
-	// Set/Promo checks
-	if (card.setCode && !rules.allowedSetCodes.includes(card.setCode)) return false
-	if (card.promoCode) {
-		const ok = rules.allowedPromoPrefixes.some((p) => card.promoCode?.startsWith(p))
-		if (!ok) return false
+
+	if (rules.disallowedSetPrefixes?.some((prefix) => card.setCode?.startsWith(prefix))) {
+		return rules.allowListOverrides?.includes(card.name) ?? false
 	}
-	// Date cutoff as fallback
+
+	if (isKnownLegalPrinting(card, rules)) return true
+
+	if (card.setCode || card.promoCode) {
+		return rules.allowListOverrides?.includes(card.name) ?? false
+	}
+
 	if (card.releaseDate && new Date(card.releaseDate) > new Date(rules.cutoffDateIso)) {
 		return rules.allowListOverrides?.includes(card.name) ?? false
 	}
-	// Disallowed set prefixes
-	if (rules.disallowedSetPrefixes && card.setCode) {
-		if (rules.disallowedSetPrefixes.some((p) => card.setCode?.startsWith(p))) return false
-	}
+
 	return true
 }
 
@@ -34,5 +40,3 @@ export function maxCopiesForCard(card: CardData, rules: GoatRulesConfig): number
 	if (rules.banlist.semiLimited.includes(card.name)) return 2
 	return 3
 }
-
-
