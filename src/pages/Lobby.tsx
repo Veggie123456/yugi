@@ -42,7 +42,7 @@ export default function Lobby() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
       <div className="page-heading">
         <div>
-          <div className="eyebrow">GOAT ONLINE ALPHA</div>
+          <div className="eyebrow">DUELIST ISLAND · ALPHA</div>
           <h1>Duel Lobby</h1>
         </div>
       </div>
