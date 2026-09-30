@@ -5,7 +5,7 @@ export default function CardInspector({ card }: { card?: CardData | null }) {
 	if (!card) {
 		return (
 			<aside className="card-inspector empty">
-				<div className="inspector-brand">GOAT ONLINE</div>
+				<div className="inspector-brand">DUELIST ISLAND</div>
 				<div className="inspector-empty-card">SELECT A CARD</div>
 				<div className="inspector-empty-copy">
 					Tap a card in your hand or on the field to inspect it here.
@@ -16,7 +16,7 @@ export default function CardInspector({ card }: { card?: CardData | null }) {
 
 	return (
 		<aside className="card-inspector">
-			<div className="inspector-brand">GOAT ONLINE</div>
+			<div className="inspector-brand">DUELIST ISLAND</div>
 			<div className="inspector-card-art">
 				<Card card={card} />
 			</div>
