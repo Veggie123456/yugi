@@ -1,4 +1,4 @@
-import { CardData } from './card'
+import type { CardData } from './card'
 
 export type Phase = 'DRAW' | 'STANDBY' | 'MAIN1' | 'BATTLE' | 'MAIN2' | 'END'
 
@@ -18,13 +18,15 @@ export interface PlayerState {
 	banished: CardData[]
 	extra: CardData[]
 	fieldSpell?: CardData
-	monsterZone: (ZoneCard | null)[] // 5 slots
-	spellTrapZone: (CardData | null)[] // 5 slots, treat set/spell trap as face-down data in UI
+	monsterZone: (ZoneCard | null)[]
+	spellTrapZone: (CardData | null)[]
 	normalSummonUsedThisTurn?: boolean
 }
 
 export interface DuelState {
 	turnPlayer: 0 | 1
+	turnNumber: number
+	turnDrawn: boolean
 	phase: Phase
 	players: [PlayerState, PlayerState]
 	log: string[]
@@ -38,5 +40,3 @@ export interface DuelState {
 	chainLinks?: Array<{ seat: 0|1, name: string }>
 	passesInChainWindow?: number
 }
-
-

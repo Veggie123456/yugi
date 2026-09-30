@@ -1,6 +1,6 @@
 export const hoverLift = {
 	whileHover: { y: -4, scale: 1.02 },
-	transition: { type: 'spring', stiffness: 300, damping: 20 }
+	transition: { type: 'spring' as const, stiffness: 300, damping: 20 }
 }
 
 export const fadeIn = {
@@ -12,7 +12,7 @@ export const fadeIn = {
 export const flipIn = {
 	initial: { rotateY: 90, opacity: 0 },
 	animate: { rotateY: 0, opacity: 1 },
-	transition: { type: 'spring', stiffness: 180, damping: 16 }
+	transition: { type: 'spring' as const, stiffness: 180, damping: 16 }
 }
 
 

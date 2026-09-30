@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import { DuelState, Phase, PlayerState, ZoneCard } from '../types/duel'
-import { Effect } from '../types/effects'
-import { CardData } from '../types/card'
+import type { DuelState, Phase, PlayerState, ZoneCard } from '../types/duel'
+import type { Effect } from '../types/effects'
+import type { CardData } from '../types/card'
 import { playSound } from '../lib/sound'
 import { useSettingsStore } from './settings'
 import { canNormalSummonNow, tributeRequirementFor, canChangePositionNow } from '../lib/rules'
@@ -19,6 +19,15 @@ function createEmptyBoard(): Omit<PlayerState, 'name'> {
 	}
 }
 
+function shuffle<T>(items: T[]): T[] {
+	const result = [...items]
+	for (let i = result.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1))
+		;[result[i], result[j]] = [result[j], result[i]]
+	}
+	return result
+}
+
 function logPush(state: DuelState, msg: string) {
 	state.log = [...state.log, msg]
 }
@@ -26,8 +35,10 @@ function logPush(state: DuelState, msg: string) {
 export interface DuelStore extends DuelState {
 	resetWithDecks: (p1: CardData[], p2: CardData[]) => void
 	draw: (seat: 0 | 1, count?: number) => void
-	normalSummon: (seat: 0 | 1, handIndex: number, zoneIndex: number) => void
-	setFromHand: (seat: 0 | 1, handIndex: number, zoneIndex: number) => void
+	drawForTurn: () => void
+	normalSummon: (seat: 0 | 1, handIndex: number, zoneIndex: number, tributeIndexes?: number[]) => void
+	setFromHand: (seat: 0 | 1, handIndex: number, zoneIndex: number, tributeIndexes?: number[]) => void
+	setSpellTrapFromHand: (seat: 0 | 1, handIndex: number, zoneIndex: number) => void
 	flipSummon: (seat: 0 | 1, zoneIndex: number) => void
 	changePosition: (seat: 0 | 1, zoneIndex: number, to: 'ATK' | 'DEF') => void
 	endPhase: () => void
@@ -45,6 +56,8 @@ export interface DuelStore extends DuelState {
 
 export const useDuelStore = create<DuelStore>((set, get) => ({
 	turnPlayer: 0,
+	turnNumber: 1,
+	turnDrawn: false,
 	phase: 'DRAW',
 	players: [
 		{ name: 'Player 1', ...createEmptyBoard() },
@@ -54,223 +67,314 @@ export const useDuelStore = create<DuelStore>((set, get) => ({
 	chainWindowOpen: false,
 	prioritySeat: 0,
 	passesInChainWindow: 0,
-	resetWithDecks: (p1, p2) => set(() => {
-		const shuffled1 = [...p1]
-		const shuffled2 = [...p2]
-		for (let i = shuffled1.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1)); [shuffled1[i], shuffled1[j]] = [shuffled1[j], shuffled1[i]]
-		}
-		for (let i = shuffled2.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1)); [shuffled2[i], shuffled2[j]] = [shuffled2[j], shuffled2[i]]
-		}
-		return {
-			turnPlayer: 0,
-			phase: 'DRAW' as Phase,
-			players: [
-				{ name: 'Player 1', ...createEmptyBoard(), deck: shuffled1 },
-				{ name: 'Player 2', ...createEmptyBoard(), deck: shuffled2 },
-			],
-			log: ['Duel started']
-		}
+
+	resetWithDecks: (p1, p2) => set({
+		turnPlayer: 0,
+		turnNumber: 1,
+		turnDrawn: false,
+		phase: 'DRAW',
+		players: [
+			{ name: 'Player 1', ...createEmptyBoard(), deck: shuffle(p1) },
+			{ name: 'Player 2', ...createEmptyBoard(), deck: shuffle(p2) },
+		],
+		log: ['Duel started · Player 1 goes first'],
+		chain: [],
+		winner: undefined,
 	}),
+
 	draw: (seat, count = 1) => set((state) => {
-		const s = useSettingsStore.getState()
-		const p = state.players[seat]
+		const settings = useSettingsStore.getState()
+		const player = state.players[seat]
 		for (let i = 0; i < count; i++) {
-			const top = p.deck[0]
-			if (!top) break
-			p.deck = p.deck.slice(1)
-			p.hand = [...p.hand, top]
-			logPush(state, `${p.name} drew a card`)
-			playSound('draw', s.soundsEnabled)
-		}
-		return { ...state, players: [...state.players] as any }
-	}),
-	normalSummon: (seat, handIndex, zoneIndex) => set((state) => {
-		const s = useSettingsStore.getState()
-		const p = state.players[seat]
-		const card = p.hand[handIndex]
-		if (!card) return state
-		if (!canNormalSummonNow(state.phase)) return state
-		if (p.monsterZone[zoneIndex]) return state
-		if (p.normalSummonUsedThisTurn) return state
-		// tribute check (simplified - use open zones and count tributes from own field)
-		const needTributes = tributeRequirementFor(card)
-		const availableTributes = p.monsterZone.filter(Boolean).length
-		if (needTributes > availableTributes) return state
-		p.hand = p.hand.filter((_, i) => i !== handIndex)
-		const zone: ZoneCard = { card, position: 'ATK' }
-		p.monsterZone[zoneIndex] = zone
-		p.normalSummonUsedThisTurn = true
-		logPush(state, `${p.name} Normal Summoned ${card.name}`)
-		playSound('summon', s.soundsEnabled)
-		return { ...state, players: [...state.players] as any }
-	}),
-	setFromHand: (seat, handIndex, zoneIndex) => set((state) => {
-		const p = state.players[seat]
-		const card = p.hand[handIndex]
-		if (!card) return state
-		if (state.phase !== 'MAIN1' && state.phase !== 'MAIN2') return state
-		if (p.monsterZone[zoneIndex]) return state
-		p.hand = p.hand.filter((_, i) => i !== handIndex)
-		p.monsterZone[zoneIndex] = { card, position: 'SET' }
-		logPush(state, `${p.name} Set a monster`)
-		return { ...state, players: [...state.players] as any }
-	}),
-	flipSummon: (seat, zoneIndex) => set((state) => {
-		const p = state.players[seat]
-		const z = p.monsterZone[zoneIndex]
-		if (!z || z.position !== 'SET') return state
-		if (state.phase !== 'MAIN1' && state.phase !== 'MAIN2') return state
-		p.monsterZone[zoneIndex] = { ...z, position: 'ATK', hasPositionChangedThisTurn: true }
-		logPush(state, `${p.name} Flip Summoned ${z.card.name}`)
-		return { ...state, players: [...state.players] as any }
-	}),
-	changePosition: (seat, zoneIndex, to) => set((state) => {
-		const p = state.players[seat]
-		const z = p.monsterZone[zoneIndex]
-		if (!z || z.position === 'SET') return state
-		if (!canChangePositionNow(state.phase)) return state
-		if (z.hasPositionChangedThisTurn) return state
-		p.monsterZone[zoneIndex] = { ...z, position: to, hasPositionChangedThisTurn: true }
-		logPush(state, `${p.name} changed ${z.card.name} to ${to}`)
-		return { ...state, players: [...state.players] as any }
-	}),
-	endPhase: () => set((state) => {
-		const order: Phase[] = ['DRAW','STANDBY','MAIN1','BATTLE','MAIN2','END']
-		const i = order.indexOf(state.phase)
-		let next = order[(i + 1) % order.length]
-		let turnPlayer = state.turnPlayer
-		if (state.phase === 'END') {
-			next = 'DRAW'
-			turnPlayer = state.turnPlayer === 0 ? 1 : 0
-			// reset once per turn flags
-			state.players[turnPlayer].monsterZone = state.players[turnPlayer].monsterZone.map((z) => z ? { ...z, hasAttackedThisTurn: false, hasPositionChangedThisTurn: false } : z)
-			state.players[turnPlayer].normalSummonUsedThisTurn = false
-		}
-		logPush(state, `Phase → ${next}${next==='DRAW' ? ` (Turn: ${turnPlayer===0?'P1':'P2'})` : ''}`)
-		return { ...state, phase: next, turnPlayer }
-	}),
-	declareAttack: (attackerIndex, targetIndex) => set((state) => {
-		if (state.phase !== 'BATTLE') return state
-		const atkPlayer = state.players[state.turnPlayer]
-		const defPlayer = state.players[state.turnPlayer === 0 ? 1 : 0]
-		const attacker = atkPlayer.monsterZone[attackerIndex]
-		if (!attacker || attacker.position !== 'ATK' || attacker.hasAttackedThisTurn) return state
-		let damage = 0
-		if (typeof targetIndex === 'number' && defPlayer.monsterZone[targetIndex]) {
-			const target = defPlayer.monsterZone[targetIndex]!
-			const atk = attacker.card.attack ?? 0
-			const def = target.position === 'ATK' ? (target.card.attack ?? 0) : (target.card.defense ?? 0)
-			if (target.position === 'ATK') {
-				if (atk > def) { damage = atk - def; defPlayer.graveyard = [...defPlayer.graveyard, target.card]; defPlayer.monsterZone[targetIndex] = null }
-				else if (atk < def) { damage = def - atk; atkPlayer.lifePoints -= damage }
-				else { defPlayer.monsterZone[targetIndex] = null; defPlayer.graveyard = [...defPlayer.graveyard, target.card] }
-			} else {
-				if (atk > def) { defPlayer.monsterZone[targetIndex] = null; defPlayer.graveyard = [...defPlayer.graveyard, target.card] }
-				else if (atk < def) { damage = def - atk; atkPlayer.lifePoints -= damage }
+			const top = player.deck[0]
+			if (!top) {
+				state.winner = seat === 0 ? 1 : 0
+				logPush(state, `${player.name} could not draw and lost the duel.`)
+				break
 			}
-			logPush(state, `${atkPlayer.name} attacked ${target.card.name}${damage?` (${damage} damage)`:''}`)
-		} else {
-			// direct
-			const atk = attacker.card.attack ?? 0
-			defPlayer.lifePoints -= atk
-			logPush(state, `${atkPlayer.name} attacked directly for ${atk}`)
+			player.deck = player.deck.slice(1)
+			player.hand = [...player.hand, top]
+			logPush(state, `${player.name} drew a card`)
+			playSound('draw', settings.soundsEnabled)
 		}
-		atkPlayer.monsterZone[attackerIndex] = { ...attacker, hasAttackedThisTurn: true }
-		// win checks
-		if (defPlayer.lifePoints <= 0) return { ...state, players: [...state.players] as any, winner: state.turnPlayer }
-		if (atkPlayer.lifePoints <= 0) return { ...state, players: [...state.players] as any, winner: (state.turnPlayer===0?1:0) }
-		return { ...state, players: [...state.players] as any }
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
 	}),
-	queueEffect: (e) => set((state) => {
-		const chain = state.chain ? [...state.chain] : []
+
+	drawForTurn: () => {
+		const state = get()
+		if (state.phase !== 'DRAW' || state.turnDrawn || state.winner !== undefined) return
+		get().draw(state.turnPlayer, 1)
+		set({ turnDrawn: true })
+	},
+
+	normalSummon: (seat, handIndex, zoneIndex, tributeIndexes = []) => set((state) => {
+		const settings = useSettingsStore.getState()
+		if (seat !== state.turnPlayer || !canNormalSummonNow(state.phase)) return state
+		const player = state.players[seat]
+		const card = player.hand[handIndex]
+		if (!card || card.cardType !== 'Monster' || player.normalSummonUsedThisTurn) return state
+
+		const needed = tributeRequirementFor(card)
+		const uniqueTributes = [...new Set(tributeIndexes)]
+		if (uniqueTributes.length !== needed || uniqueTributes.some((index) => !player.monsterZone[index])) return state
+		if (player.monsterZone[zoneIndex] && !uniqueTributes.includes(zoneIndex)) return state
+
+		for (const index of uniqueTributes) {
+			const tribute = player.monsterZone[index]
+			if (tribute) player.graveyard = [...player.graveyard, tribute.card]
+			player.monsterZone[index] = null
+		}
+
+		player.hand = player.hand.filter((_, i) => i !== handIndex)
+		const zone: ZoneCard = { card, position: 'ATK' }
+		player.monsterZone[zoneIndex] = zone
+		player.normalSummonUsedThisTurn = true
+		logPush(state, `${player.name} Normal Summoned ${card.name}`)
+		playSound('summon', settings.soundsEnabled)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
+	}),
+
+	setFromHand: (seat, handIndex, zoneIndex, tributeIndexes = []) => set((state) => {
+		const settings = useSettingsStore.getState()
+		if (seat !== state.turnPlayer || !canNormalSummonNow(state.phase)) return state
+		const player = state.players[seat]
+		const card = player.hand[handIndex]
+		if (!card || card.cardType !== 'Monster' || player.normalSummonUsedThisTurn) return state
+
+		const needed = tributeRequirementFor(card)
+		const uniqueTributes = [...new Set(tributeIndexes)]
+		if (uniqueTributes.length !== needed || uniqueTributes.some((index) => !player.monsterZone[index])) return state
+		if (player.monsterZone[zoneIndex] && !uniqueTributes.includes(zoneIndex)) return state
+
+		for (const index of uniqueTributes) {
+			const tribute = player.monsterZone[index]
+			if (tribute) player.graveyard = [...player.graveyard, tribute.card]
+			player.monsterZone[index] = null
+		}
+
+		player.hand = player.hand.filter((_, i) => i !== handIndex)
+		player.monsterZone[zoneIndex] = { card, position: 'SET' }
+		player.normalSummonUsedThisTurn = true
+		logPush(state, `${player.name} Set a monster`)
+		playSound('set', settings.soundsEnabled)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
+	}),
+
+	setSpellTrapFromHand: (seat, handIndex, zoneIndex) => set((state) => {
+		const settings = useSettingsStore.getState()
+		if (seat !== state.turnPlayer || (state.phase !== 'MAIN1' && state.phase !== 'MAIN2')) return state
+		const player = state.players[seat]
+		const card = player.hand[handIndex]
+		if (!card || (card.cardType !== 'Spell' && card.cardType !== 'Trap')) return state
+		if (player.spellTrapZone[zoneIndex]) return state
+		player.hand = player.hand.filter((_, i) => i !== handIndex)
+		player.spellTrapZone[zoneIndex] = card
+		logPush(state, `${player.name} Set a Spell/Trap`)
+		playSound('set', settings.soundsEnabled)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
+	}),
+
+	flipSummon: (seat, zoneIndex) => set((state) => {
+		if (seat !== state.turnPlayer || (state.phase !== 'MAIN1' && state.phase !== 'MAIN2')) return state
+		const player = state.players[seat]
+		const zone = player.monsterZone[zoneIndex]
+		if (!zone || zone.position !== 'SET') return state
+		player.monsterZone[zoneIndex] = { ...zone, position: 'ATK', hasPositionChangedThisTurn: true }
+		logPush(state, `${player.name} Flip Summoned ${zone.card.name}`)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
+	}),
+
+	changePosition: (seat, zoneIndex, to) => set((state) => {
+		if (seat !== state.turnPlayer || !canChangePositionNow(state.phase)) return state
+		const player = state.players[seat]
+		const zone = player.monsterZone[zoneIndex]
+		if (!zone || zone.position === 'SET' || zone.hasPositionChangedThisTurn) return state
+		player.monsterZone[zoneIndex] = { ...zone, position: to, hasPositionChangedThisTurn: true }
+		logPush(state, `${player.name} changed ${zone.card.name} to ${to}`)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
+	}),
+
+	endPhase: () => set((state) => {
+		if (state.winner !== undefined) return state
+		if (state.phase === 'DRAW' && !state.turnDrawn) return state
+		const settings = useSettingsStore.getState()
+		let next: Phase
+		let turnPlayer = state.turnPlayer
+		let turnNumber = state.turnNumber
+		let turnDrawn = state.turnDrawn
+
+		switch (state.phase) {
+			case 'DRAW': next = 'STANDBY'; break
+			case 'STANDBY': next = 'MAIN1'; break
+			case 'MAIN1': next = state.turnNumber === 1 ? 'END' : 'BATTLE'; break
+			case 'BATTLE': next = 'MAIN2'; break
+			case 'MAIN2': next = 'END'; break
+			case 'END':
+				next = 'DRAW'
+				turnPlayer = state.turnPlayer === 0 ? 1 : 0
+				turnNumber += 1
+				turnDrawn = false
+				state.players[turnPlayer].monsterZone = state.players[turnPlayer].monsterZone.map((zone) => zone ? { ...zone, hasAttackedThisTurn: false, hasPositionChangedThisTurn: false } : zone)
+				state.players[turnPlayer].normalSummonUsedThisTurn = false
+				break
+		}
+
+		logPush(state, `Phase → ${next}${next === 'DRAW' ? ` · Turn ${turnNumber} (${turnPlayer === 0 ? 'P1' : 'P2'})` : ''}`)
+		playSound('phase', settings.soundsEnabled)
+		return { ...state, phase: next, turnPlayer, turnNumber, turnDrawn }
+	}),
+
+	declareAttack: (attackerIndex, targetIndex) => set((state) => {
+		if (state.phase !== 'BATTLE' || state.winner !== undefined) return state
+		const settings = useSettingsStore.getState()
+		const attackerPlayer = state.players[state.turnPlayer]
+		const defenderPlayer = state.players[state.turnPlayer === 0 ? 1 : 0]
+		const attacker = attackerPlayer.monsterZone[attackerIndex]
+		if (!attacker || attacker.position !== 'ATK' || attacker.hasAttackedThisTurn) return state
+
+		const target = typeof targetIndex === 'number' ? defenderPlayer.monsterZone[targetIndex] : null
+		if (!target && defenderPlayer.monsterZone.some(Boolean)) return state
+
+		if (target && typeof targetIndex === 'number') {
+			const atk = attacker.card.attack ?? 0
+			const defendingPosition = target.position === 'ATK' ? 'ATK' : 'DEF'
+			const targetValue = defendingPosition === 'ATK' ? (target.card.attack ?? 0) : (target.card.defense ?? 0)
+			if (target.position === 'SET') defenderPlayer.monsterZone[targetIndex] = { ...target, position: 'DEF' }
+
+			if (defendingPosition === 'ATK') {
+				if (atk > targetValue) {
+					const damage = atk - targetValue
+					defenderPlayer.lifePoints -= damage
+					defenderPlayer.graveyard = [...defenderPlayer.graveyard, target.card]
+					defenderPlayer.monsterZone[targetIndex] = null
+					if (damage) playSound('damage', settings.soundsEnabled)
+				} else if (atk < targetValue) {
+					const damage = targetValue - atk
+					attackerPlayer.lifePoints -= damage
+					attackerPlayer.graveyard = [...attackerPlayer.graveyard, attacker.card]
+					attackerPlayer.monsterZone[attackerIndex] = null
+					if (damage) playSound('damage', settings.soundsEnabled)
+				} else {
+					defenderPlayer.graveyard = [...defenderPlayer.graveyard, target.card]
+					defenderPlayer.monsterZone[targetIndex] = null
+					attackerPlayer.graveyard = [...attackerPlayer.graveyard, attacker.card]
+					attackerPlayer.monsterZone[attackerIndex] = null
+				}
+			} else {
+				if (atk > targetValue) {
+					defenderPlayer.graveyard = [...defenderPlayer.graveyard, target.card]
+					defenderPlayer.monsterZone[targetIndex] = null
+				} else if (atk < targetValue) {
+					const damage = targetValue - atk
+					attackerPlayer.lifePoints -= damage
+					if (damage) playSound('damage', settings.soundsEnabled)
+				}
+			}
+			logPush(state, `${attackerPlayer.name}'s ${attacker.card.name} attacked ${target.card.name}`)
+		} else {
+			const damage = attacker.card.attack ?? 0
+			defenderPlayer.lifePoints -= damage
+			logPush(state, `${attackerPlayer.name}'s ${attacker.card.name} attacked directly for ${damage}`)
+			playSound('direct', settings.soundsEnabled)
+			if (damage) playSound('damage', settings.soundsEnabled)
+		}
+
+		const attackerStillThere = attackerPlayer.monsterZone[attackerIndex]
+		if (attackerStillThere) attackerPlayer.monsterZone[attackerIndex] = { ...attackerStillThere, hasAttackedThisTurn: true }
+		playSound('attack', settings.soundsEnabled)
+
+		if (defenderPlayer.lifePoints <= 0) state.winner = state.turnPlayer
+		if (attackerPlayer.lifePoints <= 0) state.winner = state.turnPlayer === 0 ? 1 : 0
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
+	}),
+
+	queueEffect: (effect) => set((state) => {
+		const chain = [...(state.chain ?? [])]
 		chain.push(() => {
-			const s = useSettingsStore.getState()
-			const st = get()
-			const p = st.players[e.seat]
-			switch (e.type) {
-				case 'DRAW': {
-					get().draw(e.seat, e.params?.count ?? 1)
-					break
-				}
-				case 'LP_CHANGE': {
-					p.lifePoints += e.params?.delta ?? 0
-					break
-				}
+			if (effect.type === 'DRAW') get().draw(effect.seat, effect.params?.count ?? 1)
+			if (effect.type === 'LP_CHANGE') {
+				set((current) => {
+					current.players[effect.seat].lifePoints += effect.params?.delta ?? 0
+					return { ...current, players: [...current.players] as [PlayerState, PlayerState] }
+				})
 			}
 		})
-		logPush(state, `Effect queued: ${e.type}`)
+		logPush(state, `Effect queued: ${effect.type}`)
 		return { ...state, chain }
 	}),
-	resolveChain: () => set((state) => {
-		const chain = [...(state.chain ?? [])]
-		while (chain.length) {
-			const eff = chain.pop()!
-			eff()
-		}
-		logPush(state, 'Chain resolved')
-		// post-chain win checks (deck-out placeholder)
-		const p0 = state.players[0], p1 = state.players[1]
-		if (p0.lifePoints <= 0 && p1.lifePoints <= 0) return { ...state, chain: [], winner: 'draw' }
-		if (p0.lifePoints <= 0) return { ...state, chain: [], winner: 1 }
-		if (p1.lifePoints <= 0) return { ...state, chain: [], winner: 0 }
-		return { ...state, chain: [] }
-	}),
-	surrender: (seat) => set((state) => ({ ...state, winner: seat===0?1:0, log: [...state.log, `${state.players[seat].name} surrendered`] })),
-	openChainWindow: () => set({ chainWindowOpen: true, prioritySeat: get().turnPlayer as 0|1, passesInChainWindow: 0 }),
+
+	resolveChain: () => {
+		const chain = [...(get().chain ?? [])]
+		set({ chain: [] })
+		while (chain.length) chain.pop()?.()
+		set((state) => {
+			logPush(state, 'Chain resolved')
+			const [p0, p1] = state.players
+			if (p0.lifePoints <= 0 && p1.lifePoints <= 0) state.winner = 'draw'
+			else if (p0.lifePoints <= 0) state.winner = 1
+			else if (p1.lifePoints <= 0) state.winner = 0
+			return { ...state }
+		})
+	},
+
+	surrender: (seat) => set((state) => ({ ...state, winner: seat === 0 ? 1 : 0, log: [...state.log, `${state.players[seat].name} surrendered`] })),
+
+	openChainWindow: () => set({ chainWindowOpen: true, prioritySeat: get().turnPlayer, passesInChainWindow: 0 }),
+
 	passPriority: () => set((state) => {
 		if (!state.chainWindowOpen) return state
-		const nextSeat = (state.prioritySeat === 0 ? 1 : 0) as 0|1
-		const passes = state.passesInChainWindow! + 1
-		if (passes >= 2) {
-			// both players passed; close window and resolve chain if any
-			const hasChain = !!state.chain && state.chain.length > 0
-			return { ...state, chainWindowOpen: false, passesInChainWindow: 0, prioritySeat: nextSeat, ...(hasChain ? {} : {}) }
-		}
+		const nextSeat = state.prioritySeat === 0 ? 1 : 0
+		const passes = (state.passesInChainWindow ?? 0) + 1
+		if (passes >= 2) return { ...state, chainWindowOpen: false, passesInChainWindow: 0, prioritySeat: nextSeat }
 		return { ...state, prioritySeat: nextSeat, passesInChainWindow: passes }
 	}),
+
 	destroyMonster: (seat, index) => set((state) => {
-		const p = state.players[seat]
-		const z = p.monsterZone[index]
-		if (!z) return state
-		p.monsterZone[index] = null
-		p.graveyard = [...p.graveyard, z.card]
-		logPush(state, `${p.name}'s ${z.card.name} was destroyed`)
-		return { ...state, players: [...state.players] as any }
+		const player = state.players[seat]
+		const zone = player.monsterZone[index]
+		if (!zone) return state
+		player.monsterZone[index] = null
+		player.graveyard = [...player.graveyard, zone.card]
+		logPush(state, `${player.name}'s ${zone.card.name} was destroyed`)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
 	}),
+
 	destroyAllMonsters: (which) => set((state) => {
-		const seats: (0|1)[] = which === 'both' ? [0,1] : [which]
+		const seats: (0|1)[] = which === 'both' ? [0, 1] : [which]
 		for (const seat of seats) {
-			const p = state.players[seat]
-			for (let i=0;i<p.monsterZone.length;i++) {
-				const z = p.monsterZone[i]
-				if (z) { p.graveyard = [...p.graveyard, z.card]; p.monsterZone[i] = null }
-			}
+			const player = state.players[seat]
+			player.monsterZone.forEach((zone, index) => {
+				if (zone) {
+					player.graveyard = [...player.graveyard, zone.card]
+					player.monsterZone[index] = null
+				}
+			})
 		}
-		logPush(state, `All monsters on ${which==='both'?'both sides':which===0?'P1':'P2'} were destroyed`)
-		return { ...state, players: [...state.players] as any }
+		logPush(state, `All monsters on ${which === 'both' ? 'both sides' : which === 0 ? 'P1' : 'P2'} were destroyed`)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
 	}),
+
 	destroyAllSpellsTraps: (which) => set((state) => {
-		const seats: (0|1)[] = which === 'both' ? [0,1] : [which]
+		const seats: (0|1)[] = which === 'both' ? [0, 1] : [which]
 		for (const seat of seats) {
-			const p = state.players[seat]
-			for (let i=0;i<p.spellTrapZone.length;i++) {
-				const c = p.spellTrapZone[i]
-				if (c) { p.graveyard = [...p.graveyard, c]; p.spellTrapZone[i] = null }
-			}
+			const player = state.players[seat]
+			player.spellTrapZone.forEach((card, index) => {
+				if (card) {
+					player.graveyard = [...player.graveyard, card]
+					player.spellTrapZone[index] = null
+				}
+			})
 		}
-		logPush(state, `All Spells/Traps on ${which==='both'?'both sides':which===0?'P1':'P2'} were destroyed`)
-		return { ...state, players: [...state.players] as any }
+		logPush(state, `All Spells/Traps on ${which === 'both' ? 'both sides' : which === 0 ? 'P1' : 'P2'} were destroyed`)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
 	}),
+
 	setMonsterToSet: (seat, index) => set((state) => {
-		const p = state.players[seat]
-		const z = p.monsterZone[index]
-		if (!z) return state
-		p.monsterZone[index] = { ...z, position: 'SET' }
-		logPush(state, `${p.name}'s ${z.card.name} was set face-down`)
-		return { ...state, players: [...state.players] as any }
+		const player = state.players[seat]
+		const zone = player.monsterZone[index]
+		if (!zone) return state
+		player.monsterZone[index] = { ...zone, position: 'SET' }
+		logPush(state, `${player.name}'s ${zone.card.name} was set face-down`)
+		return { ...state, players: [...state.players] as [PlayerState, PlayerState] }
 	}),
 }))
-
-

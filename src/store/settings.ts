@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { defaultGoatRules } from '../config/goat'
-import { GoatRulesConfig } from '../types/rules'
+import type { GoatRulesConfig } from '../types/rules'
 
 interface SettingsState {
 	goatRules: GoatRulesConfig
@@ -19,5 +19,3 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 	setSoundsEnabled: (enabled) => set({ soundsEnabled: enabled }),
 	setAnimationsEnabled: (enabled) => set({ animationsEnabled: enabled }),
 }))
-
-
